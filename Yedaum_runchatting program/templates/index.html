@@ -1,0 +1,74 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <title>예다움톡</title>
+        <link href="https://fonts.googleapis.com/css?family=Black+Han+Sans|Do+Hyeon|East+Sea+Dokdo|Gugi|Jua|Nanum+Gothic|Nanum+Myeongjo:400,700,800&display=swap&subset=korean" rel="stylesheet">
+    </head>
+    <style>
+        *{
+            margin: 0;
+            padding: 0;
+        }
+        .wrapper{
+            width: 100%;
+            height: 500px;
+            margin: 100px 0;
+            text-align: center;
+        }
+        .one{
+            width: 100%;
+            height: 65%;
+            font-family: 'East Sea Dokdo';
+            background-color: #5D8C64;
+        }
+        .two{
+            width: 100%;
+            height: 35%;
+            background-color: #D1D9C1;
+        }
+        .one>div{
+            display: inline-block;
+            width: 200px;
+            height: 100px;
+            border: 6px solid #fff;
+            margin-top: 120px;
+        }
+        .one>div>p{
+            color: #fff;
+            line-height: 100px;
+            font-size: 60px;
+        }
+        .two [type='submit']{
+            border: 0;
+            height: 45px;
+            width: 160px;
+            margin-top: 25px;
+            background-color: #08402B;
+            color: #fff;
+            font-size: 11pt;
+            font-family: 'Jua';
+            letter-spacing: 2px;
+        }
+        .two [type='submit']:hover{
+            background-color: #F29F05;
+        }
+        
+    </style>
+    <body>        
+        <div class="wrapper">
+            <section class="one">
+                <div><p>예다움</p></div>
+            </section>
+            <section class="two">
+                <form action="/login">
+                    <p><input type="submit" value="로그인"></p>
+                </form>
+                <form action="/register">
+                    <p><input type="submit" value="회원가입"></p>
+                </form>
+            </section>
+        </div>
+    </body>
+</html>

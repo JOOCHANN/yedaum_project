@@ -1,0 +1,435 @@
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+		<title>예다움톡</title>
+        
+		<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='css/bootstrap.css')}}">
+		<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='css/bootstrap.min.css')}}">
+		<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='css/styles.css')}}">
+        <link href="https://fonts.googleapis.com/css?family=Black+Han+Sans|Do+Hyeon|East+Sea+Dokdo|Gugi|Jua|Nanum+Gothic|Nanum+Myeongjo:400,700,800&display=swap&subset=korean" rel="stylesheet">
+	</head>
+    <style>
+        body{
+            background-color: D1D9C1;
+        }
+        .wrapper{
+            width: 100%;
+            height: auto;
+            /*margin: 100px 0;*/
+            text-align: center;
+            background-color: #D1D9C1;
+            overflow: hidden;
+        }
+        .zero{
+            width: 100%;
+            height: 10px%;
+            font-family: 'Do Hyeon';
+            background-color: #5D8C64;
+        }
+        .zero>div{
+            color: #fff;
+            font-size: 45px;
+            margin-left: 20px;
+            text-align: left;
+        }
+        .zero>div>p{
+            color: #fff;
+            font-size: px;
+            margin-left: 20px;
+            text-align: left;
+        }
+        .time {
+		  	font-size: 0.6em;
+		  	color: #88898C;
+            float: right;
+            margin: 7px 7px 7px 0;
+		}
+    
+    </style>
+    <body>
+        <section class = "zero">
+            <div>예다움톡<a href="/logout" style="font-size: 20px; color: white; background-color: #F29F05; float: right; margin: 30px 10px 0px 0px">&nbsp로그아웃&nbsp</a></div>
+        </section>
+        <div class="wrapper">
+            <div class="container">                
+                <div class="row" style="margin-bottom: -23px;">
+                    
+                    <!-- User list table -->
+                    <div class="container-fixed col col-md-4 scrollit" style="background-color: #fff; font-family: 'Nanum Gothic'; overflow: auto;">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>전체 접속자</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users">
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- End user list -->
+                    
+                    <!-- Room list table -->
+                    <div class="container-fixed col col-md-4 scrollit" style="background-color: #fff; font-family: 'Nanum Gothic'; overflow: auto;">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>방</th>
+                                    <th><button type="button" class="form-control btn btn-default" style="width: 80px; height: 30px; float: right; font-size: 12px; " data-toggle="modal" data-target="#RoomModal">만들기</button>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="rooms">
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- End Room list -->
+                    
+                    <!-- Room's users table -->
+                    <div class="container-fixed col col-md-4 scrollit" style="background-color: #fff; font-family: 'Nanum Gothic'; overflow: auto; font-weight: 800;">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>채팅방 접속자 <span id="room_now"></span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="room_users">
+						</tbody>
+                        </table>
+                    </div>
+                    <!-- End Room's user -->
+                </div>
+                
+                <br/>
+                <br/>
+                
+                <div id="chat" style="font-family: 'Nanum Gothic';">
+                </div>
+            </div>
+            
+            <!-- Start Create Room Modal -->
+            <div class="modal fade" id="RoomModal" role="dialog" style="font-family: 'Nanum Gothic';">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal" style="font-family: 'Nanum Gothic';">&times;</button>
+                            <h4>방 만들기</h4>
+                        </div>
+                        
+                        <div class="modal-body">
+                            <form id="room_create" class="form-inline" action="#">
+                                <div class="form-group" style="font-family: 'Nanum Gothic';">
+                                    방 이름:
+                                    <input type="text" name="room_name" id="room_name" class="form-control" />
+                                    <input type="submit" value="만들기" class="form-control btn btn-default" style="font-family: 'Nanum Gothic'; " />
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal" style="font-family: 'Nanum Gothic';">닫기</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- End Create Room Modal -->
+
+		<script type="text/javascript" src="{{url_for('static', filename='js/jquery.3-1-1.min.js')}}"></script>
+		<script type="text/javascript" src="{{url_for('static', filename='js/socket.io.min.js')}}"></script>
+		<script type="text/javascript">
+		var room_state = '';
+			var user_chat_array = [];
+
+			$(document).ready(function() {
+				namespace = "/chat";
+
+				// init variabel
+				var base_url = location.protocol + '//' + document.domain + ':' + location.port;
+				var my_username = window.location.pathname.split('/')[1];
+
+				var socket = io.connect(base_url + namespace);
+
+				// when connect, register the user
+				socket.on('connect', function(){
+					socket.emit('register', {user: my_username});
+				});
+
+
+				// function to check room is exist or not
+				function check_room(room_name) {
+					var check_room_url = base_url + "/check/room/" + room_name;
+					$.get(check_room_url, function(data) {
+						if (data == 0) {
+							return false;
+						}
+						return true;
+					});
+				}
+
+				// users connect and disconnect
+				socket.on('user_response', function(msg){
+					if (msg.type == 'connect') {
+						// refresh when there is new connected or disconnected users
+						var user_list = '';
+						$.each(msg.data.users, function(key, value){
+							if (key == my_username) {
+								user_list += '<tr><td><a href="#"><span class="glyphicon glyphicon-user" style="color: #5D8C64; font-size: 14px; font-weight: 800;"></span><span style=" color: #3B593F; font-size: 14px; font-weight: 800;"> '+ key +' (나)</span></td></tr>';
+							} else {
+								user_list += '<tr><td><a href="#" class="user-list" data-id="'+key+'"><span class="glyphicon glyphicon-user" style="color: #5D8C64; font-size: 14px; font-weight: 800;"></span><span style=" color: #3B593F; font-size: 14px; font-weight: 800;"> '+ key +' </span></td></tr>';
+							}
+						});
+						// refresh user list
+						$('#users').html(user_list);
+
+						// refresh room list
+						var room_list = '';
+						$.each(msg.data.rooms, function(key, value){
+							var join_button = '';
+							if (msg.data.rooms[key].admin != my_username){
+								if ($.inArray(my_username, msg.data.rooms[key].users) == -1) {
+									join_button += '<button type="button" class="form-control btn btn-default join_room" style="width: 50px; height: 25px; font-size: 11px; float: right; margin-right: 12px;" data-id="'+key+'">접속</button>';	
+								}
+							}
+
+							room_list += '<tr><td><a class="room_list" data-id="'+key+'" href="#"><span class="glyphicon glyphicon-comment" style="color: #5D8C64; font-size: 14px; font-weight: 800;"></span><span style=" color: #3B593F; font-size: 14px; font-weight: 800;"> '+ key +' ('+ msg.data.rooms[key].users.length  +') </span></td><td>'+join_button+'</td></tr>';
+						});
+						$('#rooms').html(room_list);
+
+						// append feed message
+						$('#feed').append('<tr><td>'+ msg.message +'</td></tr>');	
+					} else if (msg.type == 'exists') {
+						window.location.href = base_url + "/?exists=1";
+					}
+					
+				});
+
+				// feed response
+				socket.on('feed_response', function(msg){
+					if ('type' in msg) {
+						// if message type is rooms, refresh room list
+						if (msg.type == 'rooms') {
+							var room_list = '';
+							$.each(msg.data, function(key, value){
+								var join_button = '';
+								if (msg.data[key].admin != my_username){
+									if ($.inArray(my_username, msg.data[key].users) == -1) {
+										join_button += '<button type="button" class="form-control btn btn-default join_room" style="width: 50px; height: 25px; font-size: 11px; float: right; margin-right: 12px;" data-id="'+key+'">접속</button>';
+									}
+								}
+
+								room_list += '<tr><td><a class="room_list" data-id="'+key+'" href="#"><span class="glyphicon glyphicon-comment" style="color: #5D8C64; font-size: 14px; font-weight: 800;"></span><span style=" color: #3B593F; font-size: 14px; font-weight: 800;"> '+ key +' ('+ msg.data[key].users.length +') </span></td><td>'+join_button+'</td></tr>';
+							});
+							$('#rooms').html(room_list);	
+						} else if (msg.type == 'room_users') {
+							var room_user_list = '';
+							$.each(msg.data, function(key, value){
+								if (value == my_username) {
+									room_user_list += '<tr><td><a href="#"><span class="glyphicon glyphicon-user" style="color: #5D8C64; font-size: 14px; font-weight: 800;"></span><span style=" color: #3B593F; font-size: 14px; font-weight: 800;"> '+ value +' (나)</span></td></tr>';
+								} else {
+									room_user_list += '<tr><td><a href="#" class="user-list" data-id="'+value+'"><span class="glyphicon glyphicon-user" style="color: #5D8C64; font-size: 14px; font-weight: 800;"></span><span style=" color: #3B593F; font-size: 14px; font-weight: 800;"> '+ value +' </span></td></tr>';
+								}
+							});
+							// refresh room user list
+							$('#room_users').html(room_user_list);							
+						} else if (msg.type == 'new_joined_users') {
+							// welcome message
+							var received_message = '<div class="clearfix" style="height: 33px;"><blockquote class="me" style="text-align: center; font-size: 10px; font-style: italic; background-color: #fff; border-right: 3px solid #8E2800 !important; border-left: 3px solid #8E2800 !important;">'+msg.welcome_message+'</blockquote></div>';
+	                		$('#rooms_'+my_username+'_'+msg.room).append(received_message);
+
+							// if user room state, refresh the room user list
+							if (room_state == msg.room || my_username == msg.user_action) {
+								socket.emit('get_room_users', {room: msg.room});
+							}
+						} else if (msg.type == 'update_room_users') {
+							// if user room state, refresh the room user list
+							if (room_state == msg.room || my_username == msg.user_action) {
+								if (msg.act == 'leave')
+								{
+									socket.emit('get_room_users', {room: msg.room});
+								} else if (msg.act == 'close') {
+									$('#room_users').html('');
+								}
+							}
+						}
+
+						if (msg.message.length > 0) {
+							$('#feed').append('<tr><td>'+ msg.message +'</td></tr>');
+						}
+					}
+				});
+
+				// message response
+				socket.on('message_response', function(msg){
+					if ('type' in msg) {
+						// if there is user click for private message or there is new private message from other user
+						if (msg.type == 'private' || msg.type == 'new_private' || msg.type == 'open_room') {
+                             var d = new Date();
+                            currenttime = d.getHours();
+
+							if (msg.type == 'open_room') {
+								var message_id = 'rooms_' + msg.data.room;
+								var message_header = msg.data.room;
+								var message_body = 'rooms_' + my_username + '_' + msg.data.room;
+								var message_input = 'rooms_message_' + msg.data.room;
+								var class_close = 'close-room';
+							} else {
+								var message_id = msg.data.user;
+								var message_header = msg.data.user;
+								var message_body = my_username + '_' + msg.data.user;
+								var message_input = 'message_' + msg.data.user;	
+								var class_close = 'close-chat';
+							}
+
+							var add_chat_html = `
+								<div class="col-md-4" id="`+message_id+`">
+									<div class="panel panel-primary" style="border-color: #F29F05;">
+										<div class="panel-heading" style="background-color: #F29F05; border-color: #F29F05;"><b> `+message_header+` </b> 
+											<span class="glyphicon glyphicon-remove pull-right `+class_close+`" style="cursor:pointer" data-id="`+message_id+`"; return false"></span> 
+										</div>
+										<div id="`+message_body+`" class="panel-body" style="height: 350px; overflow: auto;">
+										</div>
+										<div>
+											<form id="`+message_id+`" action="#" class="form-inline message-form">
+												<input type="hidden" data-id="`+message_id+`" id="sid" name="sid">
+												<div class="form-group">
+													<textarea style="width:280px; height:33px" placeholder="메시지를 입력하세요." rows="1" name="`+message_input+`" id="`+message_input+`"></textarea>
+												</div>
+												<div class="form-group">
+													<input class="btn btn-primary" type="submit" value="전송" style="background-color: #F29F05; border-color: #F29F05;">
+												</div>
+											</form>
+										</div>
+									</div>
+								</div>`;
+                            $('#chat').append(add_chat_html);
+                            $('#chat').scrollTop($('#chat')[0].scrollHeight);
+                        } else if (msg.type == 'private_message') {
+							// receive message from other
+							if (msg.act == 'pm') {
+	                        	var received_message = '<div class="clearfix" style="height: 36px; "><blockquote class="you pull-left"><strong> '+msg.data.from+' : </strong>'+msg.data.text+'</blockquote></div>';
+							} else {
+								var received_message = '<div class="clearfix" style="height: 36px;"><blockquote class="me" style="text-align: center; font-size: 10px; font-style: italic; background-color: #fff; border-right: 3px solid #8E2800 !important; border-left: 3px solid #8E2800 !important;">'+msg.data.text+'</blockquote></div>';
+							}
+                            $('#'+my_username+'_'+msg.data.from).append(received_message);
+	                		$('#'+my_username+'_'+msg.data.from).scrollTop($('#'+my_username+'_'+msg.data.from)[0].scrollHeight);
+	                	} else if (msg.type == 'room_message') {
+							// receive message from room
+							var user_from = '';
+							var class_text = '';
+
+							if (msg.data.from == my_username)
+							{
+								user_from = my_username;
+								class_text = "me pull-right";
+							} else {
+								user_from = msg.data.from;
+								class_text = "you pull-left";
+							}
+							var received_message = '<div class="clearfix" style="height: 36px;"><blockquote class="'+class_text+'"><strong> '+user_from+' : </strong> '+msg.data.text+ '</blockquote></div>';	
+							
+                            $('#rooms_'+my_username+'_'+msg.data.room).append(received_message);
+	                		$('#rooms_'+my_username+'_'+msg.data.room).scrollTop($('#rooms_'+my_username+'_'+msg.data.room)[0].scrollHeight);
+						} else if (msg.type == 'room_feed') {
+							var received_message = '<div class="clearfix" style="height: 36px;"><blockquote class="me" style="text-align: center; font-size: 10px; font-style: italic; background-color: #fff; border-right: 3px solid #8E2800 !important; border-left: 3px solid #8E2800 !important;">'+msg.data.text+'</blockquote></div>';
+                            $('#rooms_'+my_username+'_'+msg.data.room).append(received_message);
+	                		$('#rooms_'+my_username+'_'+msg.data.room).scrollTop($('#rooms_'+my_username+'_'+msg.data.room)[0].scrollHeight);
+						}
+					}
+				})
+
+				// on room create
+				$(document).on('submit', 'form#room_create', function(event){
+					var room_name = $('#room_name').val();
+					var room_exist = check_room(room_name);
+					if (room_exist) {
+						alert('Room is exist, please use another name');
+					} else {
+						socket.emit('create_room', {room: room_name})
+						$('#room_name').val('');
+						$('#RoomModal').modal('hide');
+						socket.emit('get_room_users', {room: room_name});
+						room_state = room_name;
+						$('#room_now').text('('+room_state+')');
+					}
+					return false;
+				});
+
+				// on get room users
+				$(document).on('click', '.room_list', function(){
+					var room_name = $(this).data('id');
+					socket.emit('get_room_users', {room: room_name});
+					room_state = room_name;
+					$('#room_now').text('('+room_state+')');
+					return false;
+				});
+
+				// event when joining a room
+				$(document).on('click', '.join_room', function(){
+					var room_name = $(this).data('id');
+					socket.emit('join_room', {room: room_name});
+					socket.emit('get_room_users', {room: room_name});
+					room_state = room_name;
+					$('#room_now').text('('+room_state+')');
+
+					return false;
+				});
+
+				// event when click username to open chat
+				$(document).on('click', '.user-list', function(){
+					var user_name = $(this).data('id');
+					socket.emit('private_message', {user: user_name});
+					return false;
+				});
+
+				// event when close chat
+				$(document).on('click', '.close-chat', function(){
+					var user_name = $(this).data('id');
+					$('#'+user_name).remove();
+					socket.emit('close_chat', {user: user_name});
+					return false;
+				});
+
+				// event when close room
+				$(document).on('click', '.close-room', function(){
+					var room_name = $(this).data('id');
+					$('#'+room_name).remove();
+					socket.emit('close_room', {room: room_name});
+					return false;
+				});
+
+				// if press enter, send message
+				$(document).on('keypress', '.message-form', function(event) {
+	                if (event.which == 13) {
+	                    event.preventDefault();
+	                    $(".message-form").submit();
+	                }
+	            })
+				// event when submit message
+				$(document).delegate('form', 'submit', function(event){
+					var $form = $(this);
+					var friend_id = $form.attr('id');
+					if (friend_id != 'room_create') {
+						var text = $form[0][1].value;
+
+						// submit action for room message
+						if (friend_id.match("^rooms_")) {
+			                var temp_room_name = friend_id.split("_");
+			                temp_room_name.shift();
+			                var room_name = temp_room_name.join("_");
+			                $('#rooms_message_'+room_name).val('');
+							socket.emit('room_send', {friend: friend_id, text: text});
+						} else {
+							// submit action for private message
+			            	var sent_message = '<div class="clearfix" style="height: 33px;"><blockquote class="me pull-right"><strong>'+my_username+': </strong>'+text+'</blockquote></div>';
+			                $('#'+my_username+'_'+friend_id).append(sent_message);
+			                $('#message_'+friend_id).val('');
+							socket.emit('private_send', {friend: friend_id, text: text});	
+						}
+					}
+					return false;
+				})
+			})
+		</script>
+		<script type="text/javascript" src="{{url_for('static', filename='js/bootstrap.js')}}"></script>
+	</body>
+</html>
