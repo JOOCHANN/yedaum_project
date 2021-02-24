@@ -37,8 +37,8 @@ def get_datgel(base_url):
 
 login_url = 'http://www.ilbe.com/'
 
-user = 'crollingsibal'
-password = 'park624201'
+user = ###id
+password = ###pwd
 
 # requests.session 메서드는 해당 reqeusts를 사용하는 동안 cookie를 header에 유지하도록 하여
 # 세션이 필요한 HTTP 요청에 사용됩니다.
